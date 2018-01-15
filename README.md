@@ -35,7 +35,7 @@ java -jar money.jar
 - BD_OCR_API_TOKEN = 百度OCR Secret Key
 
 
-(百度OCR)[https://cloud.baidu.com/product/ocr]
+[百度OCR](https://cloud.baidu.com/product/ocr)
 
 ## 识别答题区域
 
@@ -45,7 +45,17 @@ java -jar money.jar -auto-config 图片路径
 
 图片为答题时的截图，请发送到电脑上进行配置。也可以使用默认配置，提取答题区域是为了让OCR更快的识别出文字。
 
+也可以不指定图片路径，需要手机停留在答题页面，数据线连接着电脑，然后回车。
+
+```
+java -jar money.jar -auto-config
+```
+
 ## 运行
+
+请打开手机USB调试。
+
+在命令行输入：
 
 ```
 java -jar money.jar
@@ -56,7 +66,6 @@ java -jar money.jar
 根据搜索的 `问题+选项` 的结果个数进行排序，并输出。这样的方法往往不太准确，后期打算对字符串进行匹配，提高准确率。
 
 ## BTW
-
 
 此程序只是简单的搜索，结果仅做参考。
 
