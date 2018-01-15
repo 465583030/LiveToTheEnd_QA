@@ -1,0 +1,13 @@
+/*
+
+!.gitignore
+
+/src/*
+!/src/main/
+!/src/test/
+
+/target/*
+!/target/config.properties
+!/target/money.jar
+
+!pom.xml
