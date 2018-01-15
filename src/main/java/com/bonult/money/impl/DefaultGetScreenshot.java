@@ -29,10 +29,10 @@ public class DefaultGetScreenshot implements GetScreenshot {
 //		String time = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss").format(new Date());
 		String imgFileName = Config.IMAGE_TEMP_PATH + /*time +*/ "b.png";
 		try{
-			Process process = Runtime.getRuntime().exec(Config.ADB_PATH + " shell /system/bin/screencap -p /sdcard/1pic/screenshot.png");
+			Process process = Runtime.getRuntime().exec(Config.ADB_PATH + " shell /system/bin/screencap -p /sdcard/screenshot.png");
 			process.waitFor();
 			if(process.exitValue() == 0){
-				process = Runtime.getRuntime().exec(Config.ADB_PATH + " pull /sdcard/1pic/screenshot.png " + imgFileName);
+				process = Runtime.getRuntime().exec(Config.ADB_PATH + " pull /sdcard/screenshot.png " + imgFileName);
 				process.waitFor();
 				if(process.exitValue() == 0){
 					File imgFile = new File(imgFileName);

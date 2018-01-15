@@ -64,6 +64,11 @@ public class MakingMoneyWithQA {
 
 		int lineCount = words.size();
 
+		if(lineCount==0){
+			System.out.println("没有识别到文字");
+			return;
+		}
+
 		String questionSeg = "";
 		List<Answer> answers = new ArrayList<>(4);
 
@@ -75,7 +80,9 @@ public class MakingMoneyWithQA {
 				questionSeg += words.get(i);
 			}
 		}else{
-			// TODO 意外情况
+			for(int i = 0; i < lineCount; i++){
+				questionSeg += words.get(i);
+			}
 		}
 
 		int quesStart = 0;
