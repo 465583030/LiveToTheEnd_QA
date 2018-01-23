@@ -1,4 +1,4 @@
-package com.bonult.money;
+package com.bonult.money.ocr;
 
 import java.io.File;
 import java.util.List;

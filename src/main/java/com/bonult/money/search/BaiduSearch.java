@@ -1,6 +1,5 @@
-package com.bonult.money.impl;
+package com.bonult.money.search;
 
-import com.bonult.money.Search;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,9 +18,9 @@ import java.util.List;
  *
  * @author bonult
  */
-public class DefaultSearch implements Search {
+public class BaiduSearch implements Search {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(DefaultSearch.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(BaiduSearch.class);
 
 	public long getSearchResultCount(String word){
 		long num = 0;

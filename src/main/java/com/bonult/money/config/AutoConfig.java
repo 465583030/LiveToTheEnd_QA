@@ -1,5 +1,6 @@
-package com.bonult.money;
+package com.bonult.money.config;
 
+import com.bonult.money.screenshot.GetScreenshot;
 import com.bonult.money.tools.OrderedProperties;
 import com.bonult.money.tools.PropsTool;
 
@@ -17,9 +18,9 @@ import java.util.Properties;
  *
  * @author bonult
  */
-class AutoConfig {
+public class AutoConfig {
 
-	void config(String filePath, GetScreenshot getScreenshot){
+	public void config(String filePath, GetScreenshot getScreenshot, String configFileName){
 		File imgFile;
 		if("".equals(filePath)){
 			imgFile = getScreenshot.getImg();
@@ -72,7 +73,7 @@ class AutoConfig {
 
 		Properties p;
 		try{
-			p = PropsTool.loadProps(Config.USER_DIR + "config.properties");
+			p = PropsTool.loadProps(ConfigHolder.USER_DIR + "config.properties");
 		}catch(IOException e){
 			System.out.println("wtf");
 			return;
@@ -89,7 +90,7 @@ class AutoConfig {
 		props.put("BD_OCR_APP_ID", PropsTool.getString(p, "BD_OCR_APP_ID"));
 		props.put("BD_OCR_API_KEY", PropsTool.getString(p, "BD_OCR_API_KEY"));
 		props.put("BD_OCR_API_TOKEN", PropsTool.getString(p, "BD_OCR_API_TOKEN"));
-		Config.writeConfig(Config.USER_DIR, props);
+		ConfigHolder.writeConfig(ConfigHolder.USER_DIR, props, configFileName == null ? "config.properties" : configFileName);
 
 	}
 
@@ -121,7 +122,7 @@ class AutoConfig {
 	}
 
 	// 来自 http://blog.csdn.net/ncepuzhuang/article/details/8083354
-	public static BufferedImage toBufferedImage(Image image){
+	private static BufferedImage toBufferedImage(Image image){
 		if(image instanceof BufferedImage){
 			return (BufferedImage)image;
 		}

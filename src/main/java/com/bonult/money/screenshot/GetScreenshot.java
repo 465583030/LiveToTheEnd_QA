@@ -1,4 +1,4 @@
-package com.bonult.money;
+package com.bonult.money.screenshot;
 
 import java.io.File;
 

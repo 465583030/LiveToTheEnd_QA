@@ -1,8 +1,7 @@
-package com.bonult.money.impl;
+package com.bonult.money.ocr;
 
 import com.baidu.aip.ocr.AipOcr;
-import com.bonult.money.Config;
-import com.bonult.money.OCR;
+import com.bonult.money.config.ConfigHolder;
 import net.sf.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -18,9 +17,9 @@ import java.util.List;
 /**
  * 识别图片上的文字
  */
-public class DefaultOCR implements OCR {
+public class BaiduOCR implements OCR {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(DefaultOCR.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(BaiduOCR.class);
 
 	public List<String> getWords(File imgFile){
 		List<String> result = new ArrayList<>();
@@ -33,7 +32,7 @@ public class DefaultOCR implements OCR {
 			byte[] buffer = new byte[(int)imgFile.length()];
 			inputStream.read(buffer, 0, buffer.length);
 
-			AipOcr client = new AipOcr(Config.BD_OCR_APP_ID, Config.BD_OCR_API_KEY, Config.BD_OCR_API_TOKEN);
+			AipOcr client = new AipOcr(ConfigHolder.CONFIG.getBdOcrApiID(), ConfigHolder.CONFIG.getBdOcrApiKey(), ConfigHolder.CONFIG.getBdOcrApiToken());
 
 			HashMap<String,String> options = new HashMap<>();
 			options.put("language_type", "CHN_ENG");

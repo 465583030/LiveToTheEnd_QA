@@ -1,5 +1,9 @@
 package com.bonult.money;
 
+import com.bonult.money.config.ConfigHolder;
+import com.bonult.money.ocr.OCR;
+import com.bonult.money.screenshot.GetScreenshot;
+import com.bonult.money.search.Search;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -7,10 +11,7 @@ import java.io.File;
 import java.lang.reflect.Method;
 import java.net.URLEncoder;
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -18,8 +19,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * 程序主入口
- *
  * @author bonult
  */
 public class MakingMoneyWithQA {
@@ -42,18 +41,9 @@ public class MakingMoneyWithQA {
 		threadPool.shutdown();
 	}
 
-	private static class Answer {
-		private String answer;
-		private long qaCount;
-//		private long aCount;
-
-		Answer(String answer){
-			this.answer = answer;
-		}
-	}
-
 	public void run(){
 		long start = System.currentTimeMillis();
+
 		File imgFile = getScreenshot.getImg();
 		if(imgFile == null){
 			System.out.println("获取截图失败");
@@ -61,35 +51,133 @@ public class MakingMoneyWithQA {
 		}
 
 		List<String> words = ocr.getWords(imgFile);
-
-		int lineCount = words.size();
-
-		if(lineCount==0){
+		if(words.size() == 0){
 			System.out.println("没有识别到文字");
 			return;
 		}
 
-		String questionSeg = "";
-		List<Answer> answers = new ArrayList<>(4);
+		List<Option> options = new ArrayList<>(4);
 
-		if(lineCount >= 4){
-			for(int i = 3; i > 0; i--){// TODO 四个选项的情况
-				answers.add(new Answer(words.get(lineCount - i)));
+		String questionSeg = separateQuestionAndAnswers(options, words);
+
+		final String question = getQuestion(questionSeg);
+
+		threadPool.submit(() -> openURL(question));
+
+		search(options, question);
+
+		System.out.println("\n=======用时: " + (System.currentTimeMillis() - start) + " ms=======");
+	}
+
+	private void search(List<Option> options, String question){
+		AtomicInteger aiQA = new AtomicInteger(0);
+		Callable<Long> callableQA = () -> {
+			int index = aiQA.getAndIncrement();
+			String A = options.get(index).option;
+			return search.getSearchResultCount(question + " " + A);
+		};
+
+		AtomicInteger aiA = new AtomicInteger(0);
+		Callable<Long> callableA = () -> {
+			int index = aiA.getAndIncrement();
+			String A = options.get(index).option;
+			return search.getSearchResultCount(A);
+		};
+
+		List<Future<Long>> futuresQA = new ArrayList<>(options.size());
+		List<Future<Long>> futuresA = new ArrayList<>(options.size());
+
+		for(int i = 0; i < options.size(); i++){
+			Future<Long> futureQA = threadPool.submit(callableQA);
+			futuresQA.add(futureQA);
+			Future<Long> futureA = threadPool.submit(callableA);
+			futuresA.add(futureA);
+		}
+
+		for(int j = 0; j < options.size(); j++){
+			try{
+				options.get(j).quesAndOptCount = futuresQA.get(j).get();
+			}catch(Exception e){
+				LOGGER.error("并行任务出错", e);
 			}
-			for(int i = 0; i < lineCount - 3; i++){
-				questionSeg += words.get(i);
-			}
-		}else{
-			for(int i = 0; i < lineCount; i++){
-				questionSeg += words.get(i);
+			try{
+				options.get(j).optCount = futuresA.get(j).get();
+			}catch(Exception e){
+				LOGGER.error("并行任务出错", e);
 			}
 		}
 
+		System.out.println(question + "?");
+		System.out.println("查询结果：");
+		if(options.size() > 0){
+			int maxIndex = 0;
+			double max = -1;
+			for(int i = 0; i < options.size(); i++){
+				if(options.get(i).getWeight() > max){
+					max = options.get(i).getWeight();
+					maxIndex = i;
+				}
+			}
+			System.out.println(options.get(maxIndex).option + "\n");
+		}
+
+		double sum = 0;
+		long countSum = 0;
+		for(int j = options.size() - 1; j >= 0; j--){
+			sum += options.get(j).getWeight();
+			countSum += options.get(j).quesAndOptCount;
+		}
+
+		for(int j = options.size() - 1; j >= 0; j--){
+			Option ops = options.get(j);
+			System.out.printf("| %.1f%%", ops.getWeight() / sum * 100);
+			System.out.printf(" | %.1f%% |  ", ops.quesAndOptCount * 1.0 / countSum * 100);
+			System.out.println(ops.option);
+		}
+	}
+
+	private String separateQuestionAndAnswers(List<Option> options, List<String> words){
+		int lineCount = words.size();
+		String questionSeg = "";
+
+		int quesLineNum;
+		for(quesLineNum = 0; quesLineNum < lineCount; quesLineNum++){
+			int qIndex = words.get(quesLineNum).indexOf('?');
+			if(qIndex > -1){
+				break;
+			}
+		}
+
+		if(lineCount >= 4){
+			int i = lineCount - 1 - quesLineNum > 3 && ConfigHolder.CONFIG.getMaxOptionNum() == 4 ? 4 : 3; // 判断选项个数
+			for(; i > 0; i--){
+				lineCount--;
+				options.add(new Option(removeABC(words.get(lineCount))));
+			}
+		}
+		for(int i = 0; i < lineCount; i++){
+			String q = words.get(i);
+			int qIndex = q.indexOf('?');
+			if(qIndex > -1){
+				questionSeg += q.substring(0, qIndex);
+				break;
+			}else
+				questionSeg += q;
+		}
+		return questionSeg;
+	}
+
+	private String getQuestion(String questionSeg){
 		int quesStart = 0;
 		for(; quesStart < questionSeg.length(); quesStart++){
 			char p = questionSeg.charAt(quesStart);
 			if((p >= '0' && p <= '9')){
 				quesStart++;
+			}else if(p == 'B'){ // 有时候OCR会把 8 识别为 B
+				quesStart++;
+				if(questionSeg.charAt(quesStart) == '.')
+					quesStart++;
+				break;
 			}else if(p == '.'){
 				quesStart++;
 				break;
@@ -97,108 +185,16 @@ public class MakingMoneyWithQA {
 				break;
 			}
 		}
-		questionSeg = questionSeg.substring(quesStart, questionSeg.charAt(questionSeg.length() - 1) == '?' ? questionSeg.length() - 1 : questionSeg.length());
-
-		final String question = questionSeg;
-
-		AtomicInteger aiQA = new AtomicInteger(0);
-		Callable<Long> callableQA = () -> {
-			int index = aiQA.getAndIncrement();
-			String A = answers.get(index).answer;
-			return search.getSearchResultCount(question + " " + A);
-		};
-//		AtomicInteger aiA = new AtomicInteger(0);
-//		Callable<Long> callableA = () -> {
-//			int index = aiA.getAndIncrement();
-//			String A = answers.get(index).answer;
-//			return search.getSearchResultCount(A);
-//		};
-//		Callable<Long> callableQ = () -> search.getSearchResultCount(question);
-
-		List<Future<Long>> futuresQA = new ArrayList<>(answers.size());
-//		List<Future<Long>> futuresA = new ArrayList<>(answers.size());
-
-//		Future<Long> futureQ = threadPool.submit(callableQ);
-		threadPool.submit(() -> {
-			openURL(question);
-		});
-		for(int i = 0; i < answers.size(); i++){
-			Future<Long> future = threadPool.submit(callableQA);
-			futuresQA.add(future);
-//			Future<Long> futureA = threadPool.submit(callableA);
-//			futuresA.add(futureA);
-		}
-
-		for(int j = 0; j < futuresQA.size(); j++){
-			try{
-				answers.get(j).qaCount = futuresQA.get(j).get();
-			}catch(Exception e){
-				LOGGER.error("并行任务出错", e);
-			}
-//			try{
-//				answers.get(i).aCount=futuresA.get(i).get();
-//			}catch(Exception e){
-//				LOGGER.error("并行任务出错",e);
-//			}
-		}
-//		long qCount = 0;
-//		try{
-//			qCount = futureQ.get();
-//		}catch(Exception e){
-//			LOGGER.error("并行任务出错", e);
-//		}
-
-		int maxLength = 0;
-		for(Answer answer : answers){
-			if(answer.answer.length() > maxLength)
-				maxLength = answer.answer.length();
-		}
-
-		answers.sort(Comparator.comparingLong(a -> a.qaCount));
-
-		System.out.println(question);
-		System.out.println("查询结果：");
-		if(answers.size() > 0)
-			System.out.println(answers.get(answers.size() - 1).answer);
-
-		System.out.println("\n");
-		for(int j = answers.size() - 1; j >= 0; j--){
-			Answer ans = answers.get(j);
-			System.out.print(ans.answer);
-			int l = ans.answer.length();
-			while(l < maxLength){
-				System.out.print(" ");
-				l++;
-			}
-			System.out.println("| " + ans.qaCount);
-		}
-
-		System.out.println("\n\n=====================用时: " + (System.currentTimeMillis() - start) + " ms=====================");
+		return questionSeg.substring(quesStart, questionSeg.length()).replaceAll("[,，;；'\"!`~:：《》]", "");
 	}
 
-	public boolean checkArgs(String[] args){
-		Map<String,String> params = new HashMap<>();
-		for(int i = 0; i < args.length; i++){
-			String arg = args[i];
-			if(arg.charAt(0) == '-' && i + 1 < args.length && args[i + 1].charAt(0) != '-'){
-				params.put(arg.substring(1), args[i + 1]);
-				i++;
-			}else if(arg.charAt(0) == '-'){
-				params.put(arg.substring(1), "");
-			}
+	private String removeABC(String s){
+		if(s.length() > 2 && s.charAt(1) == '.'){
+			return s.substring(2);
+		}else if(ConfigHolder.CONFIG.isRmvQuesNum() && s.length() > 1 && s.matches("^[ABCD].*")){
+			return s.substring(1);
 		}
-
-		if(params.containsKey("auto-config")){
-			new AutoConfig().config(params.get("auto-config"), getScreenshot);
-			return false;
-		}
-
-		if("".equals(Config.BD_OCR_API_KEY) || "".equals(Config.BD_OCR_API_TOKEN) || "".equals(Config.BD_OCR_APP_ID)){
-			System.out.println("请填写完整OCR配置");
-			return false;
-		}
-
-		return true;
+		return s;
 	}
 
 	/**
@@ -206,7 +202,7 @@ public class MakingMoneyWithQA {
 	 *
 	 * @param word 问题
 	 */
-	public void openURL(String word){
+	private void openURL(String word){
 		// 见http://yuncode.net/code/c_516d4130f11f245
 		try{
 			String url = "http://www.baidu.com/s?ie=utf-8&tn=ichuner&lm=0&word=" + URLEncoder.encode(word, "UTF-8") + "&rn=20";
@@ -232,5 +228,24 @@ public class MakingMoneyWithQA {
 		}catch(Exception e){
 			LOGGER.error("打开浏览器失败", e);
 		}
+	}
+}
+
+class Option {
+	String option;
+	long quesAndOptCount;
+	long optCount;
+	private double weight;
+
+	Option(String option){
+		this.option = option;
+		weight = -1;
+	}
+
+	public double getWeight(){
+		if(weight < 0){
+			weight = quesAndOptCount * 1.0 / optCount;
+		}
+		return weight;
 	}
 }

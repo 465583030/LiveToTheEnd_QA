@@ -1,7 +1,6 @@
-package com.bonult.money.impl;
+package com.bonult.money.screenshot;
 
-import com.bonult.money.Config;
-import com.bonult.money.GetScreenshot;
+import com.bonult.money.config.ConfigHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,18 +20,17 @@ import java.util.Iterator;
  *
  * @author bonult
  */
-public class DefaultGetScreenshot implements GetScreenshot {
+public class GetPhoneScreenshot implements GetScreenshot {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(DefaultGetScreenshot.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(GetPhoneScreenshot.class);
 
 	public File getImg(){
-//		String time = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss").format(new Date());
-		String imgFileName = Config.IMAGE_TEMP_PATH + /*time +*/ "b.png";
+		String imgFileName = ConfigHolder.CONFIG.getImageTempPath() + "phone.png";
 		try{
-			Process process = Runtime.getRuntime().exec(Config.ADB_PATH + " shell /system/bin/screencap -p /sdcard/screenshot.png");
+			Process process = Runtime.getRuntime().exec(ConfigHolder.CONFIG.getAdbPath() + " shell /system/bin/screencap -p /sdcard/screenshot.png");
 			process.waitFor();
 			if(process.exitValue() == 0){
-				process = Runtime.getRuntime().exec(Config.ADB_PATH + " pull /sdcard/screenshot.png " + imgFileName);
+				process = Runtime.getRuntime().exec(ConfigHolder.CONFIG.getAdbPath() + " pull /sdcard/screenshot.png " + imgFileName);
 				process.waitFor();
 				if(process.exitValue() == 0){
 					File imgFile = new File(imgFileName);
@@ -44,7 +42,7 @@ public class DefaultGetScreenshot implements GetScreenshot {
 						reader.setInput(iis, true);
 
 						ImageReadParam param = reader.getDefaultReadParam();
-						Rectangle rectangle = new Rectangle(Config.PROBLEM_AREA_X, Config.PROBLEM_AREA_Y, Config.PROBLEM_AREA__WIDTH, Config.PROBLEM_AREA_HEIGHT);// 截取答题区域
+						Rectangle rectangle = new Rectangle(ConfigHolder.CONFIG.getProblemAreaX(), ConfigHolder.CONFIG.getProblemAreaY(), ConfigHolder.CONFIG.getProblemAreaWidth(), ConfigHolder.CONFIG.getProblemAreaHeight());// 截取答题区域
 						param.setSourceRegion(rectangle);
 						BufferedImage bi = reader.read(0, param);
 
