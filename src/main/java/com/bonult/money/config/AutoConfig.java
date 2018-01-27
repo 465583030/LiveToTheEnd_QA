@@ -23,7 +23,7 @@ public class AutoConfig {
 	public void config(String filePath, GetScreenshot getScreenshot, String configFileName){
 		File imgFile;
 		if("".equals(filePath)){
-			imgFile = getScreenshot.getImg();
+			imgFile = getScreenshot.getImgFile();
 		}else{
 			imgFile = new File(filePath);
 			if(!imgFile.exists()){

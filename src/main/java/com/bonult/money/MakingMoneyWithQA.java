@@ -7,7 +7,6 @@ import com.bonult.money.search.Search;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.lang.reflect.Method;
 import java.net.URLEncoder;
 import java.util.ArrayList;
@@ -30,11 +29,14 @@ public class MakingMoneyWithQA {
 	private Search search;
 	private ExecutorService threadPool;
 
+	public static MakingMoneyWithQA instance;
+
 	public MakingMoneyWithQA(GetScreenshot getScreenshot, OCR ocr, Search search){
 		this.getScreenshot = getScreenshot;
 		this.ocr = ocr;
 		this.search = search;
 		threadPool = Executors.newFixedThreadPool(10);
+		instance=this;
 	}
 
 	public void shutdown(){
@@ -44,13 +46,13 @@ public class MakingMoneyWithQA {
 	public void run(){
 		long start = System.currentTimeMillis();
 
-		File imgFile = getScreenshot.getImg();
-		if(imgFile == null){
+		byte[] imgFileContent = getScreenshot.getImg();
+		if(imgFileContent == null){
 			System.out.println("获取截图失败");
 			return;
 		}
 
-		List<String> words = ocr.getWords(imgFile);
+		List<String> words = ocr.getWords(imgFileContent);
 		if(words.size() == 0){
 			System.out.println("没有识别到文字");
 			return;
@@ -189,7 +191,7 @@ public class MakingMoneyWithQA {
 	}
 
 	private String removeABC(String s){
-		if(s.length() > 2 && s.charAt(1) == '.'){
+		if(s.length() > 2 && (s.charAt(1) == '.'||s.charAt(1) == ':')){
 			return s.substring(2);
 		}else if(ConfigHolder.CONFIG.isRmvQuesNum() && s.length() > 1 && s.matches("^[ABCD].*")){
 			return s.substring(1);

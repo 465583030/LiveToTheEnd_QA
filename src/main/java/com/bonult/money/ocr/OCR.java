@@ -1,6 +1,5 @@
 package com.bonult.money.ocr;
 
-import java.io.File;
 import java.util.List;
 
 /**
@@ -13,9 +12,9 @@ public interface OCR {
 	/**
 	 * 调用OCR，识别问题和选项
 	 *
-	 * @param imgFile 图片文件
+	 * @param bytes 图片文件内容
 	 * @return 识别结果
 	 */
-	List<String> getWords(File imgFile);
+	List<String> getWords(byte[] bytes);
 
 }

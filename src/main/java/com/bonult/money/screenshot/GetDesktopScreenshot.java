@@ -18,7 +18,8 @@ public class GetDesktopScreenshot implements GetScreenshot {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(GetDesktopScreenshot.class);
 
-	public File getImg(){
+	@Override
+	public File getImgFile(){
 		String imgFileName = ConfigHolder.CONFIG.getImageTempPath() + "desktop.png";
 		try{
 			Rectangle rectangle = new Rectangle(ConfigHolder.CONFIG.getProblemAreaX(), ConfigHolder.CONFIG.getProblemAreaY(), ConfigHolder.CONFIG.getProblemAreaWidth(), ConfigHolder.CONFIG.getProblemAreaHeight());// 截取答题区域
@@ -32,5 +33,4 @@ public class GetDesktopScreenshot implements GetScreenshot {
 		}
 		return null;
 	}
-
 }

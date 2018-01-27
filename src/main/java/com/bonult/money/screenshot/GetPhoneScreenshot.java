@@ -24,7 +24,8 @@ public class GetPhoneScreenshot implements GetScreenshot {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(GetPhoneScreenshot.class);
 
-	public File getImg(){
+	@Override
+	public File getImgFile(){
 		String imgFileName = ConfigHolder.CONFIG.getImageTempPath() + "phone.png";
 		try{
 			Process process = Runtime.getRuntime().exec(ConfigHolder.CONFIG.getAdbPath() + " shell /system/bin/screencap -p /sdcard/screenshot.png");
@@ -48,7 +49,6 @@ public class GetPhoneScreenshot implements GetScreenshot {
 
 						File newFile = new File(imgFile.getAbsolutePath());
 						ImageIO.write(bi, "PNG", newFile); // 会覆盖原图
-
 						return newFile;
 					}
 				}

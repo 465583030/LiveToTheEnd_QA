@@ -23,6 +23,6 @@ public interface Search {
 	 * @param word 查询关键字
 	 * @return （标题+描述）的列表
 	 */
-	List<String> getSearchResult(String word);
+	List<SearchResultItem> getSearchResult(String word);
 
 }
