@@ -77,6 +77,11 @@ java -jar money.jar
 java -jar money.jar -C <配置文件相对路径> -D -M3
 ```
 
+### 网络截图
+
+见[LiveToTheEnd](https://github.com/bonult/LiveToTheEnd)
+
+
 `-M3`表示一个问题最多3个选项，`-M4`表示最多四个选项。
 运行后程序会等待用户输入，题目出来的时候输入 `p` ，敲回车，会展示搜索结果并打开浏览器百度搜索。
 
