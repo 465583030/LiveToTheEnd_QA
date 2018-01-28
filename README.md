@@ -79,7 +79,7 @@ java -jar money.jar -C <配置文件相对路径> -D -M3
 
 ### 网络截图
 
-见[LiveToTheEnd](https://github.com/bonult/LiveToTheEnd)
+此程序已商用，请联系 `bonult@163.com` 购买 最新版本。
 
 
 `-M3`表示一个问题最多3个选项，`-M4`表示最多四个选项。
