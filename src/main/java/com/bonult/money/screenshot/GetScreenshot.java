@@ -23,12 +23,16 @@ public interface GetScreenshot {
 			inputStream.close();
 			return buffer;
 		}catch(Exception e){
+			e.printStackTrace();
 		}
 		return null;
 	}
 
 	default File getImgFile(){
 		return null;
+	}
+
+	default void close(){
 	}
 
 }

@@ -1,12 +1,13 @@
 package com.bonult.money;
 
-import com.bonult.money.config.ConfigHolder;
 import com.bonult.money.ocr.OCR;
 import com.bonult.money.screenshot.GetScreenshot;
 import com.bonult.money.search.Search;
+import com.bonult.money.search.SearchResultItem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.*;
 import java.lang.reflect.Method;
 import java.net.URLEncoder;
 import java.util.ArrayList;
@@ -15,6 +16,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -36,25 +38,36 @@ public class MakingMoneyWithQA {
 		this.ocr = ocr;
 		this.search = search;
 		threadPool = Executors.newFixedThreadPool(10);
-		instance=this;
+		instance = this;
+	}
+
+	public void addTask(Runnable r){
+		threadPool.submit(r);
 	}
 
 	public void shutdown(){
+		getScreenshot.close();
 		threadPool.shutdown();
 	}
 
 	public void run(){
+		if(!ConfigHolder.CONFIG.isOk())
+			return;
 		long start = System.currentTimeMillis();
+		Main.clearMessage();
 
 		byte[] imgFileContent = getScreenshot.getImg();
 		if(imgFileContent == null){
-			System.out.println("获取截图失败");
+			Main.insertText("=======获取截图失败=======\n", Color.RED, 14);
+			return;
+		}else if(imgFileContent.length == 1){
+			Main.insertText("=======配置信息已发送=======\n", Color.BLUE, 14);
 			return;
 		}
 
 		List<String> words = ocr.getWords(imgFileContent);
 		if(words.size() == 0){
-			System.out.println("没有识别到文字");
+			Main.insertText("=======没有识别到文字=======\n", Color.RED, 14);
 			return;
 		}
 
@@ -62,13 +75,15 @@ public class MakingMoneyWithQA {
 
 		String questionSeg = separateQuestionAndAnswers(options, words);
 
+		Main.insertText("###### 正在计算中...\n" + questionSeg + "\n", Color.BLUE, 14);
+
 		final String question = getQuestion(questionSeg);
 
 		threadPool.submit(() -> openURL(question));
 
 		search(options, question);
 
-		System.out.println("\n=======用时: " + (System.currentTimeMillis() - start) + " ms=======");
+		Main.insertText("\n=========用时 " + (System.currentTimeMillis() - start) + " ms=========\n", Color.BLUE, 14);
 	}
 
 	private void search(List<Option> options, String question){
@@ -96,22 +111,25 @@ public class MakingMoneyWithQA {
 			futuresA.add(futureA);
 		}
 
+		Future<List<SearchResultItem>> futureQ = threadPool.submit(() -> search.getSearchResult(question));
+
 		for(int j = 0; j < options.size(); j++){
 			try{
 				options.get(j).quesAndOptCount = futuresQA.get(j).get();
 			}catch(Exception e){
-				LOGGER.error("并行任务出错", e);
+				e.printStackTrace();
+				Main.insertText("并行任务出错\n", Color.RED, 14);
 			}
 			try{
 				options.get(j).optCount = futuresA.get(j).get();
 			}catch(Exception e){
-				LOGGER.error("并行任务出错", e);
+				e.printStackTrace();
+				Main.insertText("并行任务出错\n", Color.RED, 14);
 			}
 		}
 
-		System.out.println(question + "?");
-		System.out.println("查询结果：");
 		if(options.size() > 0){
+			Main.insertText("===========================\n不精确搜索结果：\n", Color.BLUE, 14);
 			int maxIndex = 0;
 			double max = -1;
 			for(int i = 0; i < options.size(); i++){
@@ -120,7 +138,7 @@ public class MakingMoneyWithQA {
 					maxIndex = i;
 				}
 			}
-			System.out.println(options.get(maxIndex).option + "\n");
+			Main.insertBoldMessage(options.get(maxIndex).option + "\n", Color.BLUE, 14);
 		}
 
 		double sum = 0;
@@ -132,9 +150,31 @@ public class MakingMoneyWithQA {
 
 		for(int j = options.size() - 1; j >= 0; j--){
 			Option ops = options.get(j);
-			System.out.printf("| %.1f%%", ops.getWeight() / sum * 100);
-			System.out.printf(" | %.1f%% |  ", ops.quesAndOptCount * 1.0 / countSum * 100);
-			System.out.println(ops.option);
+			Main.insertText(String.format("| %2d%% | %2d%% | %s\n", (int)(ops.getWeight() / sum * 100), (int)(ops.quesAndOptCount * 1.0 / countSum * 100), ops.option), Color.BLUE, 14);
+		}
+
+		try{
+			if(options.size() > 0){
+				List<SearchResultItem> matches = futureQ.get(7, TimeUnit.SECONDS);
+				for(SearchResultItem match : matches){
+					for(Option option : options){
+						option.computeMatchNum(match);
+					}
+				}
+				Main.insertText("===========================\n精确搜索结果：\n", Color.BLUE, 14);
+				for(int j = options.size() - 1; j >= 0; j--){
+					Option ops = options.get(j);
+					String str = String.format("| %2d | %s\n", ops.matchNum/*, ops.subStrMatchNum*/, ops.option);
+					if(ops.matchNum > 0 /*|| ops.subStrMatchNum > 0*/)
+						Main.insertBoldMessage(str, Color.BLUE, 14);
+					else
+						Main.insertText(str, Color.BLUE, 14);
+				}
+			}else{
+				futureQ.cancel(true);
+			}
+		}catch(Exception e){
+			LOGGER.error("未匹配到答案", e);
 		}
 	}
 
@@ -170,15 +210,24 @@ public class MakingMoneyWithQA {
 	}
 
 	private String getQuestion(String questionSeg){
+		if(!ConfigHolder.CONFIG.isRmvQuesNum())
+			return questionSeg;
 		int quesStart = 0;
 		for(; quesStart < questionSeg.length(); quesStart++){
 			char p = questionSeg.charAt(quesStart);
 			if((p >= '0' && p <= '9')){
-				quesStart++;
+				if(quesStart == 1){
+					quesStart++;
+					if(questionSeg.charAt(quesStart) == '.'){
+						quesStart++;
+					}
+					break;
+				}
 			}else if(p == 'B'){ // 有时候OCR会把 8 识别为 B
 				quesStart++;
-				if(questionSeg.charAt(quesStart) == '.')
+				if(questionSeg.charAt(quesStart) == '.'){
 					quesStart++;
+				}
 				break;
 			}else if(p == '.'){
 				quesStart++;
@@ -191,9 +240,9 @@ public class MakingMoneyWithQA {
 	}
 
 	private String removeABC(String s){
-		if(s.length() > 2 && (s.charAt(1) == '.'||s.charAt(1) == ':')){
+		if(s.length() > 2 && (s.charAt(1) == '.' || s.charAt(1) == ':')){
 			return s.substring(2);
-		}else if(ConfigHolder.CONFIG.isRmvQuesNum() && s.length() > 1 && s.matches("^[ABCD].*")){
+		}else if(ConfigHolder.CONFIG.isRmvOptNum() && s.length() > 1 && s.matches("^[ABCD].*")){
 			return s.substring(1);
 		}
 		return s;
@@ -235,13 +284,18 @@ public class MakingMoneyWithQA {
 
 class Option {
 	String option;
+	String abc;
 	long quesAndOptCount;
 	long optCount;
+	int matchNum;
+	//	int subStrMatchNum;
 	private double weight;
 
 	Option(String option){
 		this.option = option;
 		weight = -1;
+		matchNum = 0;
+//		subStrMatchNum=0;
 	}
 
 	public double getWeight(){
@@ -249,5 +303,12 @@ class Option {
 			weight = quesAndOptCount * 1.0 / optCount;
 		}
 		return weight;
+	}
+
+	void computeMatchNum(SearchResultItem item){
+		if(item.title.contains(option))
+			matchNum++;
+		if(item.description.contains(option))
+			matchNum++;
 	}
 }

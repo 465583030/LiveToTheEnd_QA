@@ -1,4 +1,4 @@
-package com.bonult.money.config;
+package com.bonult.money;
 
 import com.bonult.money.screenshot.GetScreenshot;
 import com.bonult.money.tools.OrderedProperties;

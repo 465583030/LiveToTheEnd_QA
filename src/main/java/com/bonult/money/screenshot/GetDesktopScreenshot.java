@@ -1,6 +1,6 @@
 package com.bonult.money.screenshot;
 
-import com.bonult.money.config.ConfigHolder;
+import com.bonult.money.ConfigHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

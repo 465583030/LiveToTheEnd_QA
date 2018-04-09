@@ -14,18 +14,20 @@ public class SearchTest {
 
 	@Test
 	public void testBaiduSearch(){
-		List<?> r = new BaiduSearch().getSearchResult("按行");
+		String key = "在我国南方春节吃汤圆的寓意是";
+//		String key = "“东风不与周郎便铜雀春深锁二乔”这里的东风指的是什么";
+		List<?> r = new BaiduSearch().getSearchResult(key);
 		for(Object o : r){
 			System.out.println(o);
 			System.out.println();
 		}
 	}
 
-//	@Test
-	public void testReader() throws IOException{
+	//	@Test
+	public void testStringReader() throws IOException{
 		String x = "";
 		StringReader sr = new StringReader(x);
-		char[] buff =new char[5];
+		char[] buff = new char[5];
 		System.out.println(sr.read(buff));
 	}
 

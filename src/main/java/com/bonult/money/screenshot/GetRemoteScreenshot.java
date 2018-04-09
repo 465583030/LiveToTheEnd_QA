@@ -1,7 +1,8 @@
 package com.bonult.money.screenshot;
 
+import com.bonult.money.Main;
 import com.bonult.money.MakingMoneyWithQA;
-import com.bonult.money.config.ConfigHolder;
+import com.bonult.money.ConfigHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,17 +38,20 @@ public class GetRemoteScreenshot implements GetScreenshot {
 
 	private static class Server implements Runnable {
 
-		private int port = 8080;
+		private int port = ConfigHolder.CONFIG.getPort();
 		private ServerSocket serverSocket;
+//		private final ExecutorService threadPool = Executors.newFixedThreadPool(3);;
 
 		private Server() throws Exception{
 			serverSocket = new ServerSocket(port, 3);
-			System.out.println("服务器已启动!");
+			Main.infoMsgShow("服务器已启动!","");
 		}
 
 		public void run(){
 			while(true){
 				Socket socket = null;
+				if(serverSocket.isClosed())
+					break;
 				try{
 					socket = serverSocket.accept();
 
@@ -72,7 +76,6 @@ public class GetRemoteScreenshot implements GetScreenshot {
 						out.write((ConfigHolder.CONFIG.getProblemAreaHeight() + "").getBytes());
 						out.flush();
 						socket.shutdownOutput();
-						buffer = null;
 					}
 				}catch(IOException e){
 					LOGGER.error(e.getMessage(), e);
@@ -99,9 +102,19 @@ public class GetRemoteScreenshot implements GetScreenshot {
 		}
 
 		public void close() throws IOException{
+//			threadPool.shutdown();
 			serverSocket.close();
 		}
-
 	}
 
+	@Override
+	public void close(){
+		if(server != null){
+			try{
+				server.close();
+			}catch(IOException e){
+				Main.errorMsgShow(e.getMessage(),"关闭网络连接出错");
+			}
+		}
+	}
 }

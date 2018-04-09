@@ -1,7 +1,7 @@
 package com.bonult.money.ocr;
 
 import com.baidu.aip.ocr.AipOcr;
-import com.bonult.money.config.ConfigHolder;
+import com.bonult.money.ConfigHolder;
 import net.sf.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;

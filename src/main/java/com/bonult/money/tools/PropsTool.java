@@ -40,19 +40,29 @@ public class PropsTool {
 	/**
 	 * Load the property file
 	 *
-	 * @param path path of the file
+	 * @param file file
 	 * @return properties in the file
 	 */
-	public static Properties loadProps(String path) throws IOException{
-		File file = new File(path);
+	public static Properties loadProps(File file) throws IOException{
 		if(!file.exists()){
-			throw new FileNotFoundException("File \"" + path + "\" is not found!");
+			throw new FileNotFoundException("File \"" + file.getAbsolutePath() + "\" is not found!");
 		}
 		InputStream in = new FileInputStream(file);
 		Properties p = new Properties();
 		p.load(in);
 		in.close();
 		return p;
+	}
+
+	/**
+	 * Load the property file
+	 *
+	 * @param path path of the file
+	 * @return properties in the file
+	 */
+	public static Properties loadProps(String path) throws IOException{
+		File file = new File(path);
+		return loadProps(file);
 	}
 
 	public static String getString(Properties props, String key, String defaultValue){
